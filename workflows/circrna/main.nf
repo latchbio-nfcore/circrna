@@ -29,7 +29,8 @@ include { validateInputSamplesheet         } from '../../subworkflows/local/util
 include { softwareVersionsToYAML           } from '../../subworkflows/nf-core/utils_nfcore_pipeline'
 include { PREPARE_GENOME                   } from '../../subworkflows/local/prepare_genome'
 include { CIRCRNA_DISCOVERY                } from '../../subworkflows/local/circrna_discovery'
-include { CIRCRNA_DISCOVERY as CIRCRNA_DISCOVERY_BENCHMARKING } from '../../subworkflows/local/circrna_discovery_benchmarking'
+include { CIRCRNA_DISCOVERY as CIRCRNA_DISCOVERY_BENCHMARKING } from '../../subworkflows/local/circrna_discovery'
+include { BENCHMARKING                     } from '../../subworkflows/local/benchmarking'
 include { QUANTIFICATION                   } from '../../subworkflows/local/quantification'
 include { MIRNA_PREDICTION                 } from '../../subworkflows/local/mirna_prediction'
 include { DIFFERENTIAL_EXPRESSION          } from '../../subworkflows/local/differential_expression'
@@ -180,6 +181,12 @@ workflow CIRCRNA {
             params.duplicates_fun,
             params.exon_boundary
         )
+
+        BENCHMARKING(
+            CIRCRNA_DISCOVERY.out.tool_bed,
+            CIRCRNA_DISCOVERY_BENCHMARKING.out.tool_bed
+        )
+
         ch_versions = ch_versions.mix(CIRCRNA_DISCOVERY_BENCHMARKING.out.versions)
     }
 
@@ -207,7 +214,7 @@ workflow CIRCRNA {
 
     MIRNA_PREDICTION(
         CIRCRNA_DISCOVERY.out.fasta,
-        CIRCRNA_DISCOVERY.out.circrna_bed12,
+        CIRCRNA_DISCOVERY.out.tool_bed,
         ch_mature
     )
 

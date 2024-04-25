@@ -258,7 +258,7 @@ workflow CIRCRNA_DISCOVERY {
     ch_versions = ch_versions.mix(COUNTS_COMBINED.out.versions)
 
     emit:
-    circrna_bed12 = ANNOTATION.out.bed
+    tool_bed = ANNOTATION.out.bed
     fasta = FASTA.out.analysis_fasta
     annotation_bed = REMOVE_SCORE_STRAND.out.output
     annotation_gtf = COMBINE_ANNOTATION_GTFS.out.sorted
