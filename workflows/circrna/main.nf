@@ -29,6 +29,7 @@ include { validateInputSamplesheet         } from '../../subworkflows/local/util
 include { softwareVersionsToYAML           } from '../../subworkflows/nf-core/utils_nfcore_pipeline'
 include { PREPARE_GENOME                   } from '../../subworkflows/local/prepare_genome'
 include { CIRCRNA_DISCOVERY                } from '../../subworkflows/local/circrna_discovery'
+include { CIRCRNA_DISCOVERY as CIRCRNA_DISCOVERY_BENCHMARKING } from '../../subworkflows/local/circrna_discovery_benchmarking'
 include { QUANTIFICATION                   } from '../../subworkflows/local/quantification'
 include { MIRNA_PREDICTION                 } from '../../subworkflows/local/mirna_prediction'
 include { DIFFERENTIAL_EXPRESSION          } from '../../subworkflows/local/differential_expression'
@@ -134,8 +135,13 @@ workflow CIRCRNA {
     // 2. circRNA Discovery
     //
 
+    FASTQC_TRIMGALORE.out.reads.branch{
+        real: !it[0].benchmarking
+        benchmarking: it[0].benchmarking
+    }.set{ ch_reads }
+
     CIRCRNA_DISCOVERY(
-        FASTQC_TRIMGALORE.out.reads,
+        ch_reads.real,
         ch_fasta,
         ch_gtf,
         bowtie_index,
@@ -154,7 +160,31 @@ workflow CIRCRNA {
     ch_versions = ch_versions.mix(CIRCRNA_DISCOVERY.out.versions)
 
     //
-    // 3. Quantification
+    // 3. Benchmarking
+    //
+
+    if (params.benchmarking) {
+        CIRCRNA_DISCOVERY_BENCHMARKING(
+            ch_reads.benchmarking,
+            ch_fasta,
+            ch_gtf,
+            bowtie_index,
+            bowtie2_index,
+            bwa_index,
+            chromosomes,
+            hisat2_index,
+            segemehl_index,
+            star_index,
+            params.bsj_reads,
+            params.tool_filter,
+            params.duplicates_fun,
+            params.exon_boundary
+        )
+        ch_versions = ch_versions.mix(CIRCRNA_DISCOVERY_BENCHMARKING.out.versions)
+    }
+
+    //
+    // 4. Quantification
     //
 
     QUANTIFICATION(
@@ -172,7 +202,7 @@ workflow CIRCRNA {
     ch_versions = ch_versions.mix(QUANTIFICATION.out.versions)
 
     //
-    // 4. miRNA prediction
+    // 5. miRNA prediction
     //
 
     MIRNA_PREDICTION(
@@ -184,7 +214,7 @@ workflow CIRCRNA {
     ch_versions = ch_versions.mix(MIRNA_PREDICTION.out.versions)
 
     //
-    // 5. Differential expression tests
+    // 6. Differential expression tests
     //
 
     ch_ensembl_database_map = params.module.contains('differential_expression') ? Channel.fromPath("${projectDir}/bin/ensembl_database_map.txt") : Channel.empty()
