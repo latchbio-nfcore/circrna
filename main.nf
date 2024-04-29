@@ -60,7 +60,7 @@ workflow NFCORE_CIRCRNA {
     ch_gtf         = Channel.value([[id: "gtf"], file(params.gtf, checkIfExists:true)])
     ch_mature      = params.module.split(',').contains('mirna_prediction') ? Channel.value([[id: "mature"], file(params.mature, checkIfExists:true)]) : Channel.empty()
     ch_phenotype   = Channel.value([[id: "phenotype"], file(params.phenotype, checkIfExists:true)])
-    ch_mirna       = params.module.split(',').contains('mirna_prediction') ? Channel.value(params.mirna_expression) : Channel.empty()
+    ch_mirna       = params.module.split(',').contains('mirna_prediction') ? Channel.value([[id: "mirna"], file(params.mirna_expression, checkIfExists:true)]) : Channel.empty()
     ch_species     = params.module.split(',').contains('differential_expression') ? Channel.value(params.species_id) : Channel.empty()
 
     CIRCRNA (
@@ -70,7 +70,8 @@ workflow NFCORE_CIRCRNA {
         ch_gtf,
         ch_mature,
         ch_species,
-        ch_versions
+        ch_versions,
+        ch_mirna
     )
 
     emit:
