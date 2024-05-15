@@ -1,11 +1,14 @@
-include { TARGETSCAN_DATABASE            } from '../../modules/local/targetscan/database'
-include { TARGETSCAN                     } from '../../modules/local/targetscan/predict'
-include { MIRANDA                        } from '../../modules/nf-core/miranda'
-include { MIRNA_TARGETS                  } from '../../modules/local/mirna_targets'
-include { DESEQ2_NORMALIZATION           } from '../../modules/local/deseq2/normalization'
-include { MIRNA_FILTERING                } from '../../modules/local/mirna_filtering'
-include { GAWK as MIRANDA_TO_MAJORITY    } from '../../modules/nf-core/gawk'
-include { GAWK as TARGETSCAN_TO_MAJORITY } from '../../modules/nf-core/gawk'
+include { TARGETSCAN_DATABASE             } from '../../modules/local/targetscan/database'
+include { TARGETSCAN                      } from '../../modules/local/targetscan/predict'
+include { MIRANDA                         } from '../../modules/nf-core/miranda'
+include { MIRNA_TARGETS                   } from '../../modules/local/mirna_targets'
+include { DESEQ2_NORMALIZATION            } from '../../modules/local/deseq2/normalization'
+include { MIRNA_FILTERING                 } from '../../modules/local/mirna_filtering'
+include { GAWK as MIRANDA_TO_MAJORITY     } from '../../modules/nf-core/gawk'
+include { GAWK as TARGETSCAN_TO_MAJORITY  } from '../../modules/nf-core/gawk'
+include { CAT_CAT as COMBINE_BINDINGSITES } from '../../modules/nf-core/cat/cat'
+
+// include { MAJORITY_VOTE              } from '../../modules/local/majority_vote'
 
 workflow MIRNA_PREDICTION{
 
@@ -17,6 +20,7 @@ workflow MIRNA_PREDICTION{
 
     main:
     ch_versions = Channel.empty()
+    ch_predictions = Channel.empty()
 
     //
     // MIRNA QUANTIFICATION WORKFLOW:
@@ -30,7 +34,9 @@ workflow MIRNA_PREDICTION{
 	                                     params.mirna_min_sample_percentage,  
 										 params.mirna_min_reads
 										 ).filtered
+    
 	ch_versions = ch_versions.mix(MIRNA_FILTERING.out.versions)
+
     //
     // TARGETSCAN WORKFLOW:
     //
@@ -41,6 +47,8 @@ workflow MIRNA_PREDICTION{
 
     ch_versions = ch_versions.mix(TARGETSCAN_DATABASE.out.versions)
     ch_versions = ch_versions.mix(TARGETSCAN.out.versions)
+	
+	ch_predictions = ch_predictions.mix(TARGETSCAN_TO_MAJORITY.out.output)
 
     //
     // MIRANDA WORKFLOW:
@@ -48,7 +56,9 @@ workflow MIRNA_PREDICTION{
 
     MIRANDA( circrna_fasta, ch_mature.map{meta, mature -> mature} )
 	MIRANDA_TO_MAJORITY( MIRANDA.out.txt, [] )
+    
 	ch_versions = ch_versions.mix(MIRANDA.out.versions)
+	ch_predictions = ch_predictions.mix(MIRANDA_TO_MAJORITY.out.output)
 
 
     //
@@ -59,6 +69,19 @@ workflow MIRNA_PREDICTION{
     MIRNA_TARGETS( consolidate_targets )
 
     ch_versions = ch_versions.mix(MIRNA_TARGETS.out.versions)
+
+
+	//
+	// UNIFICATION OF PREDICTIONS
+	//
+
+    ch_predictions.map{meta, file -> file}.collect().map{[[id: "mirna"], it]}
+	
+	COMBINE_BINDINGSITES ( ch_predictions )
+    
+	//
+	// MAJORITY VOTE: TODO
+	//
 
     emit:
     versions = ch_versions
