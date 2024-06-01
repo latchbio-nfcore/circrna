@@ -19,6 +19,7 @@ workflow MIRNA_PREDICTION {
     ch_versions = Channel.empty()
 
     MIRNA_BINDINGSITES( circrna_fasta, circrna_bed12, ch_mature )
+    ch_versions = ch_versions.mix(MIRNA_BINDINGSITES.out.versions)
 
     //
     // MIRNA NORMALIZATION WORKFLOW:
