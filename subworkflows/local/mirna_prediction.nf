@@ -19,9 +19,6 @@ workflow MIRNA_PREDICTION {
     main:
     ch_versions = Channel.empty()
 
-    MIRNA_BINDINGSITES( transcriptome_fasta, circrna_bed12, ch_mature )
-    ch_versions = ch_versions.mix(MIRNA_BINDINGSITES.out.versions)
-
     //
     // MIRNA NORMALIZATION WORKFLOW:
     //
@@ -38,7 +35,14 @@ workflow MIRNA_PREDICTION {
     ch_versions = ch_versions.mix(MIRNA_FILTERING.out.versions)
 
     //
-    // COMPUTE CORREALTION:
+    // MIRNA BINDING SITES:
+    //
+    // TODO: Implement filtering of miRNAs from ch_mature if they are not present in ch_mirna_filtered
+    MIRNA_BINDINGSITES( transcriptome_fasta, circrna_bed12, ch_mature )
+    ch_versions = ch_versions.mix(MIRNA_BINDINGSITES.out.versions)
+
+    //
+    // COMPUTE CORRELATION:
     //
 
     ch_binding_site_batches = MIRNA_BINDINGSITES.out.binding_sites
