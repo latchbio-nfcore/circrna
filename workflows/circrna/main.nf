@@ -176,11 +176,11 @@ workflow CIRCRNA {
     //
 
     MIRNA_PREDICTION(
-        CIRCRNA_DISCOVERY.out.fasta,
+        QUANTIFICATION.out.transcriptome,
         CIRCRNA_DISCOVERY.out.circrna_bed12,
         ch_mature,
         ch_mirna,
-        QUANTIFICATION.out.circular_tx_counts
+        QUANTIFICATION.out.tx_counts
     )
 
     ch_versions = ch_versions.mix(MIRNA_PREDICTION.out.versions)

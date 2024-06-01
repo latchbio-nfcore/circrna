@@ -5,7 +5,6 @@ include { MERGE_SAMPLES          } from '../../modules/local/count_matrix/merge_
 include { UPSET as UPSET_SAMPLES } from '../../modules/local/upset'
 include { UPSET as UPSET_ALL     } from '../../modules/local/upset'
 include { BEDTOOLS_GETFASTA      } from '../../modules/nf-core/bedtools/getfasta'
-include { GAWK as ADD_BACKSPLICE } from '../../modules/nf-core/gawk'
 
 // SUBWORKFLOWS
 include { SEGEMEHL       } from './discovery/segemehl'
@@ -148,14 +147,12 @@ workflow CIRCRNA_DISCOVERY {
     //
 
     BEDTOOLS_GETFASTA( ANNOTATION.out.merged_bed, fasta )
-    ADD_BACKSPLICE( BEDTOOLS_GETFASTA.out.fasta, [])
 
     ch_versions = ch_versions.mix(BEDTOOLS_GETFASTA.out.versions)
-    ch_versions = ch_versions.mix(ADD_BACKSPLICE.out.versions)
 
     emit:
     circrna_bed12  = ANNOTATION.out.merged_bed
-    fasta          = ADD_BACKSPLICE.out.output
+    fasta          = BEDTOOLS_GETFASTA.out.fasta
     annotation_bed = ANNOTATION.out.bed
     annotation_gtf = ANNOTATION.out.gtf
     counts_bed     = MERGE_SAMPLES.out.counts_bed
