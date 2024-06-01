@@ -179,7 +179,8 @@ workflow CIRCRNA {
         CIRCRNA_DISCOVERY.out.fasta,
         CIRCRNA_DISCOVERY.out.circrna_bed12,
         ch_mature,
-        ch_mirna
+        ch_mirna,
+        QUANTIFICATION.out.circular_tx_counts
     )
 
     ch_versions = ch_versions.mix(MIRNA_PREDICTION.out.versions)
