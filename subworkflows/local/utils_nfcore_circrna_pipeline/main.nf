@@ -170,6 +170,12 @@ def validateInputSamplesheet(input) {
         error("Please check input samplesheet -> Multiple runs of a sample must be of the same datatype i.e. single-end or paired-end: ${metas[0].id}")
     }
 
+    // Check that multiple runs of the same sample are of the same strandedness i.e. auto / unstranded / forward / reverse
+    def strandedness_ok = metas.collect{ it.strandedness }.unique().size == 1
+    if (!strandedness_ok) {
+        error("Please check input samplesheet -> Multiple runs of a sample must be of the same strandedness: ${metas[0].id}")
+    }
+
     return [ metas[0], fastqs ]
 }
 //
@@ -193,17 +199,6 @@ def genomeExistsError() {
             "  Genome '${params.genome}' not found in any config files provided to the pipeline.\n" +
             "  Currently, the available genome keys are:\n" +
             "  ${params.genomes.keySet().join(", ")}\n" +
-            "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-        error(error_string)
-    }
-}
-
-def moduleExistsError() {
-    if (params.module && !checkParameterList(params.module, defineModuleList())) {
-        def error_string = "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" +
-            "  Module '${params.modules.join(", ")}' not found in the pipeline.\n" +
-            "  Currently, the available modules are:\n" +
-            "  ${defineModuleList().join(", ")}\n" +
             "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
         error(error_string)
     }
@@ -271,14 +266,6 @@ def methodsDescriptionText(mqc_methods_yaml) {
     def description_html = engine.createTemplate(methods_text).make(meta)
 
     return description_html.toString()
-}
-
-def defineModuleList() {
-    return [
-    'circrna_discovery',
-    'mirna_prediction',
-    'differential_expression'
-    ]
 }
 
 def checkParameterExistence(it, list) {

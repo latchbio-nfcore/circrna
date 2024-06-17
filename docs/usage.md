@@ -1,44 +1,55 @@
 # nf-core/circrna: Usage
 
-It is recommended that first time users run `nf-core/circrna` with the minimal test dataset either locally or on a HPC, referring to the [output documentation](https://nf-co.re/circrna/dev/output) before running a full analysis.
+## :warning: Please read this documentation on the nf-core website: [https://nf-co.re/rnaseq/usage](https://nf-co.re/rnaseq/usage)
+
+> _Documentation of pipeline parameters is generated automatically from the pipeline schema and can no longer be found in markdown files._
+
+## Pipeline parameters
+
+Please provide pipeline parameters via the CLI or Nextflow `-params-file` option. Custom config files including those provided by the `-c` Nextflow option can be used to provide any configuration except for parameters; see [docs](https://nf-co.re/usage/configuration#custom-configuration-files).
+
+## Samplesheet input
+
+You will need to create a samplesheet with information about the samples you would like to analyse before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 4 columns, and a header row as shown in the examples below.
 
 ```bash
-nextflow run nf-core/circrna -profile test,<docker/singularity/podman/institute>
+--input '[path to samplesheet file]'
 ```
 
-# Running the pipeline
+### Multiple runs of the same sample
 
-The `sample` identifiers have to be the same when you have re-sequenced the same sample more than once e.g. to increase sequencing depth. The pipeline will concatenate the raw reads before performing any downstream analysis. Below is an example for the same sample sequenced across 3 lanes:
+The `sample` identifiers have to be the same when you have re-sequenced the same sample more than once e.g. to increase sequencing depth. The pipeline will concatenate the raw reads before performing any downstream analysis. Below is an example for the same sample sequenced across 3 lanes. If you set the strandedness value to `auto` the pipeline will use the tool-defaults throughout the pipeline.
 
 ```csv title="samplesheet.csv"
-sample,fastq_1,fastq_2
-CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz
-CONTROL_REP1,AEG588A1_S1_L003_R1_001.fastq.gz,AEG588A1_S1_L003_R2_001.fastq.gz
-CONTROL_REP1,AEG588A1_S1_L004_R1_001.fastq.gz,AEG588A1_S1_L004_R2_001.fastq.gz
+sample,fastq_1,fastq_2,strandedness
+CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz,auto
+CONTROL_REP1,AEG588A1_S1_L003_R1_001.fastq.gz,AEG588A1_S1_L003_R2_001.fastq.gz,auto
+CONTROL_REP1,AEG588A1_S1_L004_R1_001.fastq.gz,AEG588A1_S1_L004_R2_001.fastq.gz,auto
 ```
 
 ### Full samplesheet
 
-The pipeline will auto-detect whether a sample is single- or paired-end using the information provided in the samplesheet. The samplesheet can have as many columns as you desire, however, there is a strict requirement for the first 3 columns to match those defined in the table below.
+The pipeline will auto-detect whether a sample is single- or paired-end using the information provided in the samplesheet. The samplesheet can have as many columns as you desire, however, there is a strict requirement for the first 4 columns to match those defined in the table below.
 
 A final samplesheet file consisting of both single- and paired-end data may look something like the one below. This is for 6 samples, where `TREATMENT_REP3` has been sequenced twice.
 
 ```csv title="samplesheet.csv"
-sample,fastq_1,fastq_2
-CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz
-CONTROL_REP2,AEG588A2_S2_L002_R1_001.fastq.gz,AEG588A2_S2_L002_R2_001.fastq.gz
-CONTROL_REP3,AEG588A3_S3_L002_R1_001.fastq.gz,AEG588A3_S3_L002_R2_001.fastq.gz
-TREATMENT_REP1,AEG588A4_S4_L003_R1_001.fastq.gz,
-TREATMENT_REP2,AEG588A5_S5_L003_R1_001.fastq.gz,
-TREATMENT_REP3,AEG588A6_S6_L003_R1_001.fastq.gz,
-TREATMENT_REP3,AEG588A6_S6_L004_R1_001.fastq.gz,
+sample,fastq_1,fastq_2,strandedness
+CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz,forward
+CONTROL_REP2,AEG588A2_S2_L002_R1_001.fastq.gz,AEG588A2_S2_L002_R2_001.fastq.gz,forward
+CONTROL_REP3,AEG588A3_S3_L002_R1_001.fastq.gz,AEG588A3_S3_L002_R2_001.fastq.gz,forward
+TREATMENT_REP1,AEG588A4_S4_L003_R1_001.fastq.gz,,reverse
+TREATMENT_REP2,AEG588A5_S5_L003_R1_001.fastq.gz,,reverse
+TREATMENT_REP3,AEG588A6_S6_L003_R1_001.fastq.gz,,reverse
+TREATMENT_REP3,AEG588A6_S6_L004_R1_001.fastq.gz,,reverse
 ```
 
-| Column    | Description                                                                                                                                                                            |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sample`  | Custom sample name. This entry will be identical for multiple sequencing libraries/runs from the same sample. Spaces in sample names are automatically converted to underscores (`_`). |
-| `fastq_1` | Full path to FastQ file for Illumina short reads 1. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                             |
-| `fastq_2` | Full path to FastQ file for Illumina short reads 2. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                             |
+| Column         | Description                                                                                                                                                                            |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sample`       | Custom sample name. This entry will be identical for multiple sequencing libraries/runs from the same sample. Spaces in sample names are automatically converted to underscores (`_`). |
+| `fastq_1`      | Full path to FastQ file for Illumina short reads 1. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                             |
+| `fastq_2`      | Full path to FastQ file for Illumina short reads 2. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                             |
+| `strandedness` | Sample strand-specificity. Must be one of `unstranded`, `forward`, `reverse` or `auto`.                                                                                                |
 
 An [example samplesheet](../assets/samplesheet.csv) has been provided with the pipeline.
 
@@ -47,8 +58,18 @@ An [example samplesheet](../assets/samplesheet.csv) has been provided with the p
 The typical command for running the pipeline is as follows:
 
 ```bash
-nextflow run nf-core/circrna --input ./samplesheet.csv --outdir ./results --genome GRCh37 -profile docker
+nextflow run \
+    nf-core/circrna \
+    --input <SAMPLESHEET> \
+    --outdir <OUTDIR> \
+    --gtf <GENOME GTF> \
+    --fasta <GENOME FASTA> \
+    --igenomes_ignore \
+    --genome null \
+    -profile docker
 ```
+
+> **NB:** Loading iGenomes configuration remains the default for reasons of consistency with other workflows, but should be disabled when not using iGenomes, applying the recommended usage above.
 
 This will launch the pipeline with the `docker` configuration profile. See below for more information about profiles.
 
@@ -114,7 +135,7 @@ If you wish to share such profile (such as upload as supplementary material for 
 
 Input data can be passed to `nf-core/circrna` using a CSV file containing the absolute paths to input fastq files.
 
-The headers of the CSV file must be: `sample,fastq_1,fastq_2`.
+The header of the CSV file must at least contain the `sample` and `fastq_1` columns. The `fastq_2` column is optional and only required for paired-end data. With an additional `strandness` column, the user can specify the strandedness of the library. The `sample` column should contain a unique identifier for each sample, and the `fastq_1` and `fastq_2` columns should contain the paths to the input fastq files.
 
 Valid examples for fastq input data in a CSV file is given below:
 
@@ -127,33 +148,13 @@ Valid examples for fastq input data in a CSV file is given below:
 | TCGA-EJ-5518-01A | /data/afbbc370-5970-43d3-b9f8-f40f8e649bb6_gdc_realn_rehead_R1.fastq.gz | /data/afbbc370-5970-43d3-b9f8-f40f8e649bb6_gdc_realn_rehead_R2.fastq.gz |
 | TCGA-KK-A8I4-01A | /data/81254692-ee1e-4985-bd0a-4929eed4c620_gdc_realn_rehead_R1.fastq.gz | /data/81254692-ee1e-4985-bd0a-4929eed4c620_gdc_realn_rehead_R2.fastq.gz |
 
-> Do not leave any cell empty in the CSV file.
-
 ## Phenotype file
 
-When running the differential expression analysis module via the `--module differential_expression` parameter, an input `phenotype.csv` file is required to specify levels for `DESeq2`. At a minimum, the user must supply one column of levels for `DESeq2` which **must be called condition**. This should be the primary contrast of interest in your experiment (e.g case vs. control). If additional columns are supplied to the phenotype file, they will be controlled for in the linear mixed model. A brief proof of concept is given below in R notation:
-
-```R
-colnames(phenotype)
-  [1] 'Sample_ID' 'condition'
-
-print(dds$design)
-  [1] ' ~ condition'
-```
-
-```R
-colnames(phenotype)
-  [1] 'Sample_ID' 'condition' 'replicates' 'location'
-
-print(dds$design)
-  [1] ' ~ location + replicates + condition'
-```
-
-It is recommended to construct your input CSV file in conjunction with your phenotype file as the first column denoting sample names **must match** the first column of the `phenotype.csv` file.
+The CSV file provided via the `phenotype` parameter can be used to provide additional metadata about the samples in the input CSV file. If provided, it needs to at least contain a column called `sample` which corresponds to the `sample` column in the input CSV file and a column called `condition`. The `condition` column will be used to group samples for the [CircTest](https://github.com/dieterich-lab/CircTest) functionality. All metadata columns will be included in the result `SummarizedExperiment` RDS file.
 
 A valid example of a `phenotype.csv` file (matching the TCGA example input CSV file above) is given:
 
-| Sample_ID        | condition |
+| sample           | condition |
 | ---------------- | --------- |
 | TCGA-EJ-7783-11A | control   |
 | TCGA-G9-6365-11A | control   |
@@ -166,9 +167,9 @@ A valid example of a `phenotype.csv` file (matching the TCGA example input CSV f
 
 `nf-core/circrna` provides 3 analysis modules to the user:
 
-1. circRNA quantification & annotation.
-2. miRNA target prediction.
-3. Differential circRNA expression analysis.
+1. BSJ detection
+2. Joint quantification of circular and linear transcriptome
+3. miRNA target prediction
 
 ## circRNA discovery
 
@@ -197,7 +198,6 @@ nextflow run nf-core/circrna \
     -profile <docker/singularity/podman/institute> \
     --genome 'GRCh37' \
     --input 'samples.csv' \
-    --module 'circrna_discovery' \
     --tool 'ciriquant,dcc,find_circ'
 ```
 
@@ -219,7 +219,6 @@ nextflow run nf-core/circrna \
     --genome 'GRCh37' \
     --input 'samples.csv' \
     --phenotype 'phenotype.csv' \
-    --module 'circrna_discovery' \
     --tool 'ciriquant, dcc, find_circ' \
     --bsj_reads 2
 ```
@@ -239,7 +238,6 @@ nextflow run nf-core/circrna \
     -profile <docker/singularity/podman/institute> \
     --genome 'GRCh37' \
     --input 'samples.csv' \
-    --module 'circrna_discovery' \
     --tool 'ciriquant, dcc, find_circ' \
     --bsj_reads 2 \
     --tool_filter 2
@@ -262,27 +260,10 @@ nextflow run nf-core/circrna \
     -profile <docker/singularity/podman/institute> \
     --genome 'GRCh37' \
     --input 'samples.csv' \
-    --module 'circrna_discovery, mirna_prediction'
+    --module 'circrna_discovery,mirna_prediction'
 ```
 
 To view the outputs of the module, please see the output [documentation](https://nf-co.re/circrna/dev/output#mirna-prediction).
-
-## Differential circRNA analysis
-
-The third and final module of `nf-core/circrna` performs differential expression analysis of circRNAs, returning `DESeq2` result outputs, plots and diagnostic plots for the user. In order to run this module, it is essential that your `phenotype.csv` file is in the correct format - please refer to the input [specifications](https://nf-co.re/circrna/dev/usage#differential-expression-analysis).
-
-To invoke the module, specify the `--module` parameter via the configuration profile or pass it via the command line when running the workflow:
-
-```bash
-nextflow run nf-core/circrna \
-    -profile <docker/singularity/podman/institute> \
-    --genome 'GRCh37' \
-    --input 'samples.csv' \
-    --phenotype 'phenotype.csv' \
-    --module 'circrna_discovery, differential_expression'
-```
-
-To view the outputs of the module, please see the output [documentation](https://nf-co.re/circrna/dev/output#differential-expression-analysis).
 
 ## Core Nextflow arguments
 

@@ -2,20 +2,18 @@
 
 ## Introduction
 
-This documentation describes the output of `nf-core/circrna` for the test dataset which runs all 3 modules in the workflow: `circRNA discovery` , `miRNA prediction` and `differential expression` analysis of circular RNAs in RNA-Seq data.
+:::warning
+This page has not been updated for a long time and might not align with the current pipeline output. We are working on updating it.
+If you have questions regarding the pipeline output, feel free to reach out in the [nf-core slack](https://nfcore.slack.com/channels/circrna) channel.
+:::
 
-A full run of the workflow will produce the following directory output structure:
+This document describes the output produced by the pipeline. Most of the plots are taken from the MultiQC report generated from the [full-sized test dataset](https://github.com/nf-core/test-datasets/tree/circrna) for the pipeline using a command similar to the one below:
 
-```console
-|-- results/
-        |-- circrna_discovery
-        |-- differential_expression
-        |-- mirna_prediction
-        |-- multiqc
-        |-- pipeline_info
-        |-- quality_control
-        |-- references
+```bash
+nextflow run nf-core/circrna -profile test_full,<docker/singularity/institute>
 ```
+
+The directories listed below will be created in the results directory after the pipeline has finished. All paths are relative to the top-level results directory.
 
 ## Pipeline Overview
 
@@ -23,30 +21,34 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
 
 - Raw read QC ([`FastQC`](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/))
 - Adapter trimming ([`Trim Galore!`](https://www.bioinformatics.babraham.ac.uk/projects/trim_galore/))
-- MultiQC report [`MultiQC`](http://multiqc.info/)
-- circRNA quantification
-- [`CIRIquant`](https://github.com/Kevinzjy/CIRIquant)
-- [`STAR 2-Pass mode`](https://github.com/alexdobin/STAR)
-  - [`CIRCexplorer2`](https://circexplorer2.readthedocs.io/en/latest/)
-  - [`circRNA finder`](https://github.com/orzechoj/circRNA_finder)
-  - [`DCC`](https://github.com/dieterich-lab/DCC)
-- [`find circ`](https://github.com/marvin-jens/find_circ)
-- [`MapSplice`](http://www.netlab.uky.edu/p/bioinfo/MapSplice2)
-- [`Segemehl`](https://www.bioinf.uni-leipzig.de/Software/segemehl/)
+- BSJ detection
+  - [`CIRIquant`](https://github.com/Kevinzjy/CIRIquant)
+  - [`STAR 2-Pass mode`](https://github.com/alexdobin/STAR)
+    - [`CIRCexplorer2`](https://circexplorer2.readthedocs.io/en/latest/)
+    - [`circRNA finder`](https://github.com/orzechoj/circRNA_finder)
+    - [`DCC`](https://github.com/dieterich-lab/DCC)
+  - [`find circ`](https://github.com/marvin-jens/find_circ)
+  - [`MapSplice`](http://www.netlab.uky.edu/p/bioinfo/MapSplice2)
+  - [`Segemehl`](https://www.bioinf.uni-leipzig.de/Software/segemehl/)
 - circRNA annotation
-- Export mature spliced length as FASTA file
-- Annotate parent gene, underlying transcripts.
-- circRNA count matrix
-- miRNA target prediction
+- Extract circRNA sequences and build circular transcriptome
+- Merge circular transcriptome with linear transcriptome derived from provided GTF
+- Quantification of combined circular and linear transcriptome
+  - [`psirc-quant`](https://github.com/Christina-hshi/psirc)
+- miRNA binding affinity analysis (only if the `mature` parameter is provided)
   - [`miRanda`](http://cbio.mskcc.org/miRNA2003/miranda.html)
   - [`TargetScan`](http://www.targetscan.org/cgi-bin/targetscan/data_download.vert72.cgi)
-  - Filter results, miRNAs must be called by both tools
-- Differential expression analysis [`DESeq2`](https://bioconductor.org/packages/release/bioc/html/DESeq2.html)
-- Circular - Linear ratio tests ['CircTest'](https://github.com/dieterich-lab/CircTest)
+- Statistical tests (only if the `phenotype` parameter is provided)
+  - [`CircTest`](https://github.com/dieterich-lab/CircTest)
+- MultiQC report [`MultiQC`](http://multiqc.info/)
 
 ## Quality Control
 
 ### FastQC
+
+:::note
+The FastQC plots displayed in the MultiQC report show _untrimmed_ reads. They may contain adapter sequence and potentially regions with low quality.
+:::
 
 <details markdown="1">
 <summary>Output files</summary>
@@ -86,55 +88,6 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
 > **NB:** TrimGalore! will only run using multiple cores if you are able to use more than > 5 and > 6 CPUs for single- and paired-end data, respectively. The total cores available to TrimGalore! will also be capped at 4 (7 and 8 CPUs in total for single- and paired-end data, respectively) because there is no longer a run-time benefit. See [release notes](https://github.com/FelixKrueger/TrimGalore/blob/master/Changelog.md#version-060-release-on-1-mar-2019) and [discussion whilst adding this logic to the nf-core/atacseq pipeline](https://github.com/nf-core/atacseq/pull/65).
 
 ![MultiQC - cutadapt trimmed sequence length plot](images/mqc_cutadapt_trimmed.png)
-
-### DESeq2
-
-<details markdown="1">
-<summary>Output files</summary>
-
-- `quality_control/DESeq2_QC`
-  - `circRNA/`
-    - `DESeq2_condition_PCA.pdf`: PCA plot of PC1 vs. PC2 displaying the highest amount of variation within the response variable `condition`.
-    <p markdown="1" align="center">
-    <img src="images/output/DESeq2_QC/circRNA/DESeq2_condition_PCA.png" alt="circRNA PCA" width="500">
-    </p>
-    - `DESeq2_dispersion.pdf`: Plot of re-fitted genes + gene outliers after shrinkage estimation performed by gene-wide maximum likelihood estimates (red curve) & maximum a posteriori estimates of dispersion.
-    <p markdown="1" align="center">
-    <img src="images/output/DESeq2_QC/circRNA/DESeq2_dispersion.png" alt="circRNA dispersion" width="500">
-    </p>
-    - `DESeq2_sample_dendogram.pdf`: Dendogram displaying sample distances using [pvclust](https://cran.r-project.org/web/packages/pvclust/index.html).
-    <p markdown="1" align="center">
-    <img src="images/output/DESeq2_QC/circRNA/DESeq2_sample_dendogram.png" alt="circRNA dendo" width="500">
-    </p>
-    - `DESeq2_sample_heatmap.pdf`: Heatmap displaying Manhattan distance between samples.
-    <p markdown="1" align="center">
-    <img src="images/output/DESeq2_QC/circRNA/DESeq2_sample_heatmap.png" alt="circRNA samplehm" width="500">
-    </p>
-  - `RNA-Seq/`
-    - `DESeq2_condition_PCA.pdf`: PCA plot of PC1 vs. PC2 displaying the highest amount of variation within the response variable `condition`.
-    <p markdown="1" align="center">
-    <img src="images/output/DESeq2_QC/RNA-Seq/DESeq2_condition_PCA.png" alt="circRNA PCA" width="500">
-    </p>
-    - `DESeq2_dispersion.pdf`: Plot of re-fitted genes + gene outliers after shrinkage estimation performed by gene-wide maximum likelihood estimates (red curve) & maximum a posteriori estimates of dispersion.
-    <p markdown="1" align="center">
-    <img src="images/output/DESeq2_QC/RNA-Seq/DESeq2_dispersion.png" alt="circRNA dispersion" width="500">
-    </p>
-    - `DESeq2_sample_dendogram.pdf`: Dendogram displaying sample distances using [pvclust](https://cran.r-project.org/web/packages/pvclust/index.html).
-    <p markdown="1" align="center">
-    <img src="images/output/DESeq2_QC/RNA-Seq/DESeq2_sample_dendogram.png" alt="circRNA dendo" width="500">
-    </p>
-    - `DESeq2_sample_heatmap.pdf`: Heatmap displaying Manhattan distance between samples.
-    <p markdown="1" align="center">
-    <img src="images/output/DESeq2_QC/RNA-Seq/DESeq2_sample_heatmap.png" alt="circRNA samplehm" width="500">
-    </p>
-
-</details>
-
-`nf-core/circrna` outputs quality control plots of normalised _log2_ expression data from `DESeq2` to assess heterogeneity in the experiment samples. These plots can be useful to assess sample-sample similarity and to identify potential batch effects within the experiment. Plots are generated for both circRNAs and RNA-Seq data when the differential expression analysis module has been selected by the user (see `--module` [documentation](https://nf-co.re/circrna/dev/parameters#pipeline-options)).
-
-:::note
-The FastQC plots displayed in the MultiQC report show _untrimmed_ reads. They may contain adapter sequence and potentially regions with low quality.
-:::
 
 ### MultiQC
 
@@ -444,130 +397,3 @@ Intermediate files generated by each quantification tool are described in depth 
 
 1. miRNA must be called by both `miRanda` and `TargetScan`.
 2. If a site within the circRNA mature sequence shares duplicate miRNA ID's overlapping the same coordinates, the miRNA with the highest score is kept.
-
-## Differential Expression Analysis
-
-`nf-core/circrna` will perform differential expression analysis by contrasting every variable within the `condition` column i.e the response variable.
-
-| samples       | condition |
-| ------------- | --------- |
-| control_rep1  | control   |
-| control_rep2  | control   |
-| control_rep3  | control   |
-| lung_rep1     | lung      |
-| lung_rep2     | lung      |
-| lung_rep3     | lung      |
-| melanoma_rep1 | melanoma  |
-| melanoma_rep2 | melanoma  |
-| melanoma_rep3 | melanoma  |
-
-The above experimental design will produce the `DESeq2` design formula `~ condition` and loop through the nested factors within `condition` producing outputs for `control_vs_lung`, `control_vs_melanoma`, `lung_vs_control`, `lung_vs_melanoma`, `melanoma_vs_control` and `melanoma_vs_lung`, capturing every possible contrast.
-
-_N.B:_ In the phenotype file the response variable must be called `condition`, these values are hard-coded in the automated differential expression analysis R script.
-
-### circRNA
-
-<details markdown="1">
-<summary>Output files</summary>
-
-- `differential_expression/circRNA/`
-  - `DESeq2_log2_transformed_counts.txt`: _log2(Normalised counts + 1)_
-  - `DESeq2_normalized_counts.txt`: Normalised circRNA counts.
-  - `control_vs_lung/`
-    - `DESeq2_{control_vs_lung}_Adj_pvalue_distribution.pdf`: Histogram of Adj pvalues from `results(dds)` displaying the distribution of circRNAs that reject the null hypothesis (padj <= 0.05).
-    <p markdown="1" align="center">
-    <img src="images/output/de/circRNA/DESeq2_control_vs_melanoma_Adj_pvalue_distribution.png" alt="circRNA adj-p histogram" width="500">
-    </p>
-    - `DESeq2_{control_vs_lung}_down_regulated_differential_expression.txt`: DESeq2 `results()` output filtered to include down regulated circRNAs (fold change <= -1, pvalue <= 0.05) in `condition` with respect to `control`.
-    - `DESeq2_{control_vs_lung}_fold_change_distribution.pdf`: Histogram of fold-change values for differentially expressed circRNAs.
-    <p markdown="1" align="center">
-    <img src="images/output/de/circRNA/DESeq2_control_vs_lung_fold_change_distribution.png" alt="circRNA FC histogram" width="500">
-    </p>
-    - `DESeq2_{control_vs_lung}_heatmap.pdf`: Heatmap of all differentially expressed circRNAs.
-    <p markdown="1" align="center">
-    <img src="images/output/de/circRNA/DESeq2_control_vs_lung_heatmap.png" alt="circRNA heatmap" width="500">
-    </p>
-    - `DESeq2_{control_vs_lung}_MA_plot.pdf`: Plot of the relationship between intensity and difference between the contrast made by `DESeq2`.
-    <p markdown="1" align="center">
-    <img src="images/output/de/circRNA/DESeq2_control_vs_lung_MA_plot.png" alt="circRNA heatmap" width="500">
-    </p>
-    - `DESeq2_{control_vs_lung}_pvalue_distribution.pdf`: Histogram of pvalues from `results(dds)` displaying the distribution of circRNAs that reject the null hypothesis (pvalue <= 0.05).
-    <p markdown="1" align="center">
-    <img src="images/output/de/circRNA/DESeq2_control_vs_melanoma_pvalue_distribution.png" alt="circRNA pval dist" width="500">
-    </p>
-    - `DESeq2_{condition_vs_lung}_up_regulated_differential_expression.txt`: DEseq2 `results()` ouput filtered to include up regulated circRNAs (fold change >= 1, pvalue <= 0.05) in `condition` with respect to `control`.
-    - `DESeq2_{condition_vs_lung}_volcano_plot.pdf`: Volcano plot of differentially expressed circRNAs from DESeq2 `results()` using [EnhancedVolcano](https://www.bioconductor.org/packages/release/bioc/vignettes/EnhancedVolcano/inst/doc/EnhancedVolcano.html).
-    <p markdown="1" align="center">
-    <img src="images/output/de/circRNA/DESeq2_control_vs_lung_volcano_plot.png" alt="circRNA volcano" width="500">
-    </p>
-
-</details>
-
-Sample outputs from `control_vs_lung` are given below, one of 6 `DESeq2` results folders returned by the experimental design given above.
-
-_Note:_ The test dataset produces sparsely populated plots due to aggressive subsampling.
-
-### Boxplots
-
-<details markdown="1">
-<summary>Output files</summary>
-
-- `differential_expression/boxplots/`
-  - `control_vs_lung`
-    - `*boxplot.pdf`: Boxplot of differentially expressed circRNAs in `control_vs_lung`.
-    <p markdown="1" align="center">
-    <img src="images/output/de/boxplots/lung.png" alt="circRNA boxplot" width="500">
-    </p>
-  - `control_vs_lung`
-    - `*boxplot.pdf`: Boxplot of differentially expressed circRNAs in `control_vs_melanoma`.
-    <p markdown="1" align="center">
-    <img src="images/output/de/boxplots/melanoma.png" alt="circRNA boxplot" width="500">
-    </p>
-
-</details>
-
-`nf-core/circrna` will produce boxplots of differentially expressed circRNAs (normalised expression) between all contrasts available in `condition`.
-
-_Note:_ The output files give examples for `control_vs_lung` and `control_vs_melanoma`.
-
-### RNA-Seq
-
-<details markdown="1">
-<summary>Output files</summary>
-
-- `differential_expression/RNA-Seq/`
-  - `DESeq2_log2_transformed_counts.txt`: _log2(Normalised counts + 1)_
-  - `DESeq2_normalized_counts.txt`: Normalised RNA-Seq counts.
-  - `control_vs_lung/`
-    - `DESeq2_{control_vs_lung}_Adj_pvalue_distribution.pdf`: Histogram of Adj pvalues from `results(dds)` displaying the distribution of genes that reject the null hypothesis (padj <= 0.05).
-    <p markdown="1" align="center">
-    <img src="images/output/de/RNA-Seq/DESeq2_control_vs_melanoma_Adj_pvalue_distribution.png" alt="circRNA adj-p histogram" width="500">
-    </p>
-    - `DESeq2_{control_vs_lung}_down_regulated_differential_expression.txt`: DESeq2 `results()` output filtered to include down regulated genes (fold change <= -1, pvalue <= 0.05) in `condition` with respect to `control`.
-    - `DESeq2_{control_vs_lung}_fold_change_distribution.pdf`: Histogram of fold-change values for differentially expressed genes.
-    <p markdown="1" align="center">
-    <img src="images/output/de/RNA-Seq/DESeq2_control_vs_lung_fold_change_distribution.png" alt="circRNA FC histogram" width="500">
-    </p>
-    - `DESeq2_{control_vs_lung}_heatmap.pdf`: Heatmap of all differentially expressed genes.
-    <p markdown="1" align="center">
-    <img src="images/output/de/RNA-Seq/DESeq2_control_vs_melanoma_heatmap.png" alt="circRNA heatmap" width="500">
-    </p>
-    - `DESeq2_{control_vs_lung}_MA_plot.pdf`: Plot of the relationship between intensity and difference between the contrast made by `DESeq2`.
-    <p markdown="1" align="center">
-    <img src="images/output/de/RNA-Seq/DESeq2_control_vs_lung_MA_plot.png" alt="circRNA heatmap" width="500">
-    </p>
-    - `DESeq2_{control_vs_lung}_pvalue_distribution.pdf`: Histogram of pvalues from `results(dds)` displaying the distribution of genes that reject the null hypothesis (pvalue <= 0.05).
-    <p markdown="1" align="center">
-    <img src="images/output/de/RNA-Seq/DESeq2_control_vs_lung_pvalue_distribution.png" alt="circRNA pval dist" width="500">
-    </p>
-    - `DESeq2_{condition_vs_lung}_up_regulated_differential_expression.txt`: DEseq2 `results()` ouput filtered to include up regulated genes (fold change >= 1, pvalue <= 0.05) in `condition` with respect to `control`.
-    - `DESeq2_{condition_vs_lung}_volcano_plot.pdf`: Volcano plot of differentially expressed genes from DESeq2 `results()` using [EnhancedVolcano](https://www.bioconductor.org/packages/release/bioc/vignettes/EnhancedVolcano/inst/doc/EnhancedVolcano.html).
-    <p markdown="1" align="center">
-    <img src="images/output/de/RNA-Seq/DESeq2_control_vs_lung_volcano_plot.png" alt="circRNA volcano" width="500">
-    </p>
-
-</details>
-
-Sample outputs from `control_vs_lung` are given below, one of 6 `DESeq2` results folders returned by the experimental design given above.
-
-_Note:_ The test dataset produces sparsely populated plots due to aggressive subsampling.
