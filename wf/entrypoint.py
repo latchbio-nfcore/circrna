@@ -3,20 +3,15 @@ import os
 import shutil
 import subprocess
 import sys
-import typing
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import List, Optional
 
 import requests
-import typing_extensions
-from flytekit.core.annotation import FlyteAnnotation
 from latch.executions import rename_current_execution, report_nextflow_used_storage
 from latch.ldata.path import LPath
 from latch.resources.tasks import custom_task, nextflow_runtime_task
-from latch.resources.workflow import workflow
-from latch.types import metadata
 from latch.types.directory import LatchDir, LatchOutputDir
 from latch.types.file import LatchFile
 from latch_cli.nextflow.utils import _get_execution_name
@@ -34,7 +29,49 @@ class SampleSheet:
     sample: str
     fastq_1: LatchFile
     fastq_2: Optional[LatchFile]
-    strandedness: Optional[str] = None
+    strandedness: Optional[str]
+
+
+class Reference(Enum):
+    GRCh38 = "GRCh38 (Homo sapiens NCBI)"
+    GRCh37 = "GRCh37 (Homo sapiens Ensembl)"
+    CHM13 = "CHM13 (Homo sapiens T2T)"
+    hg38 = "hg38 (Homo sapiens UCSC)"
+    hg19 = "hg19 (Homo sapiens UCSC)"
+    GRCm38 = "GRCm38 (Mus musculus Ensembl)"
+    mm10 = "mm10 (Mus musculus UCSC)"
+    TAIR10 = "TAIR10 (Arabidopsis thaliana)"
+    EB2 = "EB2 (Bacillus subtilis 168)"
+    EB1 = "EB1 (Escherichia coli K-12 DH10B)"
+    UMD3_1 = "UMD3.1 (Bos taurus)"
+    bosTau8 = "bosTau8 (Bos taurus UCSC)"
+    CanFam3_1 = "CanFam3.1 (Canis familiaris)"
+    canFam3 = "canFam3 (Canis familiaris UCSC)"
+    EquCab2 = "EquCab2 (Equus caballus)"
+    equCab2 = "equCab2 (Equus caballus UCSC)"
+    Mmul_1 = "Mmul_1 (Macaca mulatta)"
+    CHIMP2_1_4 = "CHIMP2.1.4 (Pan troglodytes)"
+    panTro4 = "panTro4 (Pan troglodytes UCSC)"
+    Rnor_5_0 = "Rnor_5.0 (Rattus norvegicus)"
+    Rnor_6_0 = "Rnor_6.0 (Rattus norvegicus)"
+    rn6 = "rn6 (Rattus norvegicus UCSC)"
+    Sscrofa10_2 = "Sscrofa10.2 (Sus scrofa)"
+    susScr3 = "susScr3 (Sus scrofa UCSC)"
+    WBcel235 = "WBcel235 (Caenorhabditis elegans)"
+    ce10 = "ce10 (Caenorhabditis elegans UCSC)"
+    GRCz10 = "GRCz10 (Danio rerio)"
+    danRer10 = "danRer10 (Danio rerio UCSC)"
+    BDGP6 = "BDGP6 (Drosophila melanogaster)"
+    dm6 = "dm6 (Drosophila melanogaster UCSC)"
+    Galgal4 = "Galgal4 (Gallus gallus)"
+    galGal4 = "galGal4 (Gallus gallus UCSC)"
+    Gm01 = "Gm01 (Glycine max)"
+    IRGSP_1_0 = "IRGSP-1.0 (Oryza sativa japonica)"
+    Sbi1 = "Sbi1 (Sorghum bicolor)"
+    AGPv3 = "AGPv3 (Zea mays)"
+    R64_1_1 = "R64-1-1 (Saccharomyces cerevisiae)"
+    sacCer3 = "sacCer3 (Saccharomyces cerevisiae UCSC)"
+    EF2 = "EF2 (Schizosaccharomyces pombe)"
 
 
 def custom_samplesheet_constructor(
@@ -88,67 +125,68 @@ def initialize(run_name: str) -> str:
 
 @nextflow_runtime_task(cpu=4, memory=8, storage_gib=100)
 def nextflow_runtime(
-    run_name: str,
     pvc_name: str,
-    input: LatchFile,
-    outdir: LatchOutputDir,
+    run_name: str,
+    input: List[SampleSheet],
     phenotype: Optional[LatchFile],
     annotation: Optional[LatchFile],
     email: Optional[str],
     multiqc_title: Optional[str],
     mirna_expression: Optional[LatchFile],
     seq_center: Optional[str],
-    genome: Optional[str],
+    genome_source: str,
     fasta: Optional[LatchFile],
-    gtf: Optional[str],
-    mature: Optional[str],
-    bowtie: Optional[str],
-    bowtie2: Optional[str],
-    bwa: Optional[str],
-    hisat2: Optional[str],
-    segemehl: Optional[str],
-    star: Optional[str],
+    gtf: Optional[LatchFile],
+    mature: Optional[LatchFile],
+    bowtie: Optional[LatchDir],
+    bowtie2: Optional[LatchDir],
+    bwa: Optional[LatchDir],
+    hisat2: Optional[LatchDir],
+    segemehl: Optional[LatchFile],
+    star: Optional[LatchDir],
     clip_r1: Optional[int],
     clip_r2: Optional[int],
     three_prime_clip_r1: Optional[int],
     three_prime_clip_r2: Optional[int],
     trim_nextseq: Optional[int],
     multiqc_methods_description: Optional[str],
-    tools: str,
-    bsj_reads: Optional[int],
-    max_shift: Optional[int],
-    min_tools: Optional[int],
-    min_samples: Optional[int],
-    exon_boundary: Optional[int],
-    quantification_tools: Optional[str],
-    bootstrap_samples: Optional[int],
-    mirna_min_sample_percentage: Optional[float],
-    mirna_min_reads: Optional[int],
-    mirna_correlation: Optional[str],
-    mirna_tools: Optional[str],
-    mirna_min_tools: Optional[int],
-    sjdboverhang: Optional[int],
-    chimJunctionOverhangMin: Optional[int],
-    alignSJDBoverhangMin: Optional[int],
-    limitSjdbInsertNsj: Optional[int],
-    chimSegmentMin: Optional[int],
-    seglen: Optional[int],
-    min_intron: Optional[int],
-    max_intron: Optional[int],
-    min_map_len: Optional[int],
-    min_fusion_distance: Optional[int],
-    save_unaligned: bool,
-    save_reference: bool,
-    hisat2_build_memory: Optional[str],
-    skip_trimming: bool,
-    save_trimmed: bool,
-    skip_fastqc: bool,
-    min_trimmed_reads: Optional[int],
-    save_intermediates: bool,
+    tools: str = "circexplorer2",
+    bsj_reads: Optional[int] = 1,
+    max_shift: Optional[int] = 1,
+    min_tools: Optional[int] = 1,
+    min_samples: Optional[int] = 1,
+    exon_boundary: Optional[int] = 0,
+    quantification_tools: Optional[str] = "ciriquant,psirc",
+    bootstrap_samples: Optional[int] = 30,
+    mirna_min_sample_percentage: Optional[float] = 0.2,
+    mirna_min_reads: Optional[int] = 5,
+    mirna_correlation: Optional[str] = "pearson",
+    mirna_tools: Optional[str] = "miranda,targetscan",
+    mirna_min_tools: Optional[int] = 1,
+    sjdboverhang: Optional[int] = 100,
+    chimJunctionOverhangMin: Optional[int] = 10,
+    alignSJDBoverhangMin: Optional[int] = 10,
+    limitSjdbInsertNsj: Optional[int] = 1000000,
+    chimSegmentMin: Optional[int] = 10,
+    seglen: Optional[int] = 25,
+    min_intron: Optional[int] = 20,
+    max_intron: Optional[int] = 1000000,
+    min_map_len: Optional[int] = 40,
+    min_fusion_distance: Optional[int] = 200,
+    save_unaligned: bool = False,
+    save_reference: bool = True,
+    hisat2_build_memory: Optional[str] = "200.GB",
+    skip_trimming: bool = False,
+    save_trimmed: bool = False,
+    skip_fastqc: bool = False,
+    min_trimmed_reads: Optional[int] = 10000,
+    save_intermediates: bool = False,
+    genome: Reference = Reference.GRCh38,
+    outdir: LatchOutputDir = LatchOutputDir("latch:///CircRNA"),
 ) -> None:
     shared_dir = Path("/nf-workdir")
 
-    input_sheet = custom_samplesheet_constructor(input=input, shared_dir=shared_dir)
+    input_sheet = custom_samplesheet_constructor(samples=input, shared_dir=shared_dir)
 
     exec_name = _get_execution_name()
     if exec_name is None:
@@ -191,7 +229,7 @@ def nextflow_runtime(
         "latch.config",
         "-resume",
         *get_flag("input", input_sheet),
-        *get_flag("outdir", outdir),
+        *get_flag("outdir", LatchOutputDir(f"{outdir.remote_path}/{run_name}")),
         *get_flag("phenotype", phenotype),
         *get_flag("annotation", annotation),
         *get_flag("email", email),
@@ -223,7 +261,6 @@ def nextflow_runtime(
         *get_flag("seq_center", seq_center),
         *get_flag("save_unaligned", save_unaligned),
         *get_flag("save_reference", save_reference),
-        *get_flag("genome", genome),
         *get_flag("fasta", fasta),
         *get_flag("gtf", gtf),
         *get_flag("mature", mature),
@@ -246,6 +283,11 @@ def nextflow_runtime(
         *get_flag("save_intermediates", save_intermediates),
         *get_flag("multiqc_methods_description", multiqc_methods_description),
     ]
+
+    if genome_source == "igenome":
+        cmd += [
+            *get_flag("genome", genome),
+        ]
 
     print("Launching Nextflow Runtime")
     print(" ".join(cmd))
@@ -308,129 +350,3 @@ def nextflow_runtime(
 
     if failed:
         sys.exit(1)
-
-
-@workflow(metadata._nextflow_metadata)
-def nf_nf_core_circrna(
-    run_name: str,
-    input: LatchFile,
-    outdir: typing_extensions.Annotated[LatchDir, FlyteAnnotation({"output": True})],
-    phenotype: Optional[LatchFile],
-    annotation: Optional[LatchFile],
-    email: Optional[str],
-    multiqc_title: Optional[str],
-    mirna_expression: Optional[LatchFile],
-    seq_center: Optional[str],
-    genome: Optional[str],
-    fasta: Optional[LatchFile],
-    gtf: Optional[str],
-    mature: Optional[str],
-    bowtie: Optional[str],
-    bowtie2: Optional[str],
-    bwa: Optional[str],
-    hisat2: Optional[str],
-    segemehl: Optional[str],
-    star: Optional[str],
-    clip_r1: Optional[int],
-    clip_r2: Optional[int],
-    three_prime_clip_r1: Optional[int],
-    three_prime_clip_r2: Optional[int],
-    trim_nextseq: Optional[int],
-    multiqc_methods_description: Optional[str],
-    tools: str = "circexplorer2",
-    bsj_reads: Optional[int] = 1,
-    max_shift: Optional[int] = 1,
-    min_tools: Optional[int] = 1,
-    min_samples: Optional[int] = 1,
-    exon_boundary: Optional[int] = 0,
-    quantification_tools: Optional[str] = "ciriquant,psirc",
-    bootstrap_samples: Optional[int] = 30,
-    mirna_min_sample_percentage: Optional[float] = 0.2,
-    mirna_min_reads: Optional[int] = 5,
-    mirna_correlation: Optional[str] = "pearson",
-    mirna_tools: Optional[str] = "miranda,targetscan",
-    mirna_min_tools: Optional[int] = 1,
-    sjdboverhang: Optional[int] = 100,
-    chimJunctionOverhangMin: Optional[int] = 10,
-    alignSJDBoverhangMin: Optional[int] = 10,
-    limitSjdbInsertNsj: Optional[int] = 1000000,
-    chimSegmentMin: Optional[int] = 10,
-    seglen: Optional[int] = 25,
-    min_intron: Optional[int] = 20,
-    max_intron: Optional[int] = 1000000,
-    min_map_len: Optional[int] = 40,
-    min_fusion_distance: Optional[int] = 200,
-    save_unaligned: bool = False,
-    save_reference: bool = True,
-    hisat2_build_memory: Optional[str] = "200.GB",
-    skip_trimming: bool = False,
-    save_trimmed: bool = False,
-    skip_fastqc: bool = False,
-    min_trimmed_reads: Optional[int] = 10000,
-    save_intermediates: bool = False,
-) -> None:
-    """
-    nf-core/circrna
-
-    Sample Description
-    """
-
-    pvc_name: str = initialize(run_name=run_name)
-    nextflow_runtime(
-        pvc_name=pvc_name,
-        input=input,
-        outdir=outdir,
-        phenotype=phenotype,
-        annotation=annotation,
-        email=email,
-        multiqc_title=multiqc_title,
-        tools=tools,
-        bsj_reads=bsj_reads,
-        max_shift=max_shift,
-        min_tools=min_tools,
-        min_samples=min_samples,
-        exon_boundary=exon_boundary,
-        quantification_tools=quantification_tools,
-        bootstrap_samples=bootstrap_samples,
-        mirna_expression=mirna_expression,
-        mirna_min_sample_percentage=mirna_min_sample_percentage,
-        mirna_min_reads=mirna_min_reads,
-        mirna_correlation=mirna_correlation,
-        mirna_tools=mirna_tools,
-        mirna_min_tools=mirna_min_tools,
-        sjdboverhang=sjdboverhang,
-        chimJunctionOverhangMin=chimJunctionOverhangMin,
-        alignSJDBoverhangMin=alignSJDBoverhangMin,
-        limitSjdbInsertNsj=limitSjdbInsertNsj,
-        chimSegmentMin=chimSegmentMin,
-        seglen=seglen,
-        min_intron=min_intron,
-        max_intron=max_intron,
-        min_map_len=min_map_len,
-        min_fusion_distance=min_fusion_distance,
-        seq_center=seq_center,
-        save_unaligned=save_unaligned,
-        save_reference=save_reference,
-        genome=genome,
-        fasta=fasta,
-        gtf=gtf,
-        mature=mature,
-        bowtie=bowtie,
-        bowtie2=bowtie2,
-        bwa=bwa,
-        hisat2=hisat2,
-        hisat2_build_memory=hisat2_build_memory,
-        segemehl=segemehl,
-        star=star,
-        skip_trimming=skip_trimming,
-        save_trimmed=save_trimmed,
-        skip_fastqc=skip_fastqc,
-        clip_r1=clip_r1,
-        clip_r2=clip_r2,
-        three_prime_clip_r1=three_prime_clip_r1,
-        three_prime_clip_r2=three_prime_clip_r2,
-        trim_nextseq=trim_nextseq,
-        min_trimmed_reads=min_trimmed_reads,
-        save_intermediates=save_intermediates,
-        multiqc_methods_description=multiqc_methods_description,
-    )

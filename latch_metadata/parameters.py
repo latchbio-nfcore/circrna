@@ -21,25 +21,66 @@ class SampleSheet:
     sample: str
     fastq_1: LatchFile
     fastq_2: Optional[LatchFile]
-    strandedness: Optional[str] = None
+    strandedness: Optional[str]
 
 
 flow = [
     Section(
-        "Samples",
-        Params(
-            "input",
-            "run_name",
-            "outdir",
-            "email",
-            "multiqc_title",
+        "Inputs",
+        Params("input"),
+        Text(
+            "Sample identifier and FASTQ files should not contain spaces in file names or full directory locations."
         ),
         Text(
-            "Sample data and basic workflow configuration. Input should contain paired-end sequencing data."
+            "Strandedness can be set to 'auto', 'reverse', 'forward'. If left untoggled, it will default to 'auto'."
+        ),
+        Params(
+            "phenotype",
+            "annotation",
         ),
     ),
     Section(
+        "Reference Genome",
+        Fork(
+            "genome_source",
+            "",
+            igenome=ForkBranch(
+                "iGenome",
+                Params(
+                    "genome",
+                ),
+            ),
+            custom=ForkBranch(
+                "Custom Reference Genome",
+                Params(
+                    "fasta",
+                    "gtf",
+                ),
+                Spoiler(
+                    "Additional Reference Options",
+                    Text("Paths to pre-built indices for various aligners."),
+                    Params(
+                        "bowtie",
+                        "bowtie2",
+                        "bwa",
+                        "hisat2",
+                        "hisat2_build_memory",
+                        "segemehl",
+                        "star",
+                    ),
+                ),
+            ),
+        ),
+    ),
+    Section(
+        "Output Directory",
+        Params("run_name"),
+        Text("Parent directory for outputs"),
+        Params("outdir"),
+    ),
+    Spoiler(
         "CircRNA Configuration",
+        Text("Parameters controlling circRNA detection and filtering criteria."),
         Params(
             "tools",
             "bsj_reads",
@@ -48,18 +89,18 @@ flow = [
             "min_samples",
             "exon_boundary",
         ),
-        Text("Parameters controlling circRNA detection and filtering criteria."),
     ),
-    Section(
+    Spoiler(
         "Quantification",
+        Text("Tools and parameters for circRNA quantification."),
         Params(
             "quantification_tools",
             "bootstrap_samples",
         ),
-        Text("Tools and parameters for circRNA quantification."),
     ),
-    Section(
+    Spoiler(
         "miRNA Analysis",
+        Text("Parameters for miRNA expression analysis and binding site prediction."),
         Params(
             "mirna_expression",
             "mirna_min_sample_percentage",
@@ -69,20 +110,10 @@ flow = [
             "mirna_min_tools",
             "mature",
         ),
-        Text("Parameters for miRNA expression analysis and binding site prediction."),
     ),
-    Section(
-        "Genome References",
-        Params(
-            "genome",
-            "fasta",
-            "gtf",
-            "save_reference",
-        ),
-        Text("Reference genome files and related options."),
-    ),
-    Section(
+    Spoiler(
         "Alignment Options",
+        Text("Parameters controlling read alignment and splice junction detection."),
         Params(
             "sjdboverhang",
             "chimJunctionOverhangMin",
@@ -97,23 +128,10 @@ flow = [
             "seq_center",
             "save_unaligned",
         ),
-        Text("Parameters controlling read alignment and splice junction detection."),
     ),
-    Section(
-        "Indexing References",
-        Params(
-            "bowtie",
-            "bowtie2",
-            "bwa",
-            "hisat2",
-            "hisat2_build_memory",
-            "segemehl",
-            "star",
-        ),
-        Text("Paths to pre-built indices for various aligners."),
-    ),
-    Section(
+    Spoiler(
         "Read Processing",
+        Text("Options for read trimming and quality control."),
         Params(
             "skip_trimming",
             "save_trimmed",
@@ -125,17 +143,16 @@ flow = [
             "trim_nextseq",
             "min_trimmed_reads",
         ),
-        Text("Options for read trimming and quality control."),
     ),
-    Section(
+    Spoiler(
         "Additional Options",
+        Text("Optional parameters for additional analyses and output control."),
         Params(
-            "phenotype",
-            "annotation",
+            # "email",
+            "multiqc_title",
             "save_intermediates",
             "multiqc_methods_description",
         ),
-        Text("Optional parameters for additional analyses and output control."),
     ),
 ]
 
@@ -342,6 +359,7 @@ generated_parameters = {
         description="Save generated reference genome files and indices.",
         default=True,
     ),
+    "genome_source": NextflowParameter(),
     "genome": NextflowParameter(
         type=Optional[str],
         display_name="iGenomes Reference",
